@@ -1,0 +1,43 @@
+---
+title: "Untitled"
+output: html_document
+date: "2024-11-23"
+---
+
+```{r setup, include=FALSE}
+library(here)
+library(terra)
+library(dplyr)
+
+here::i_am('mosaic_boroughs.Rmd')
+
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+mn <- rast(here('data','nyc_manhattan_hls_bands.nc'))
+```
+
+```{r}
+bk <- rast(here('data','nyc_brooklyn_hls_bands.nc'))
+```
+
+```{r}
+crs(bk) <- "epsg:26918"
+```
+
+```{r}
+crs(mn) <- "epsg:26918"
+```
+
+```{r}
+mn_bk <- merge(mn,bk,filename="")
+```
+
+```{r}
+plot(mn_bk)
+```
+```{r}
+names(mn_bk)
+```
+

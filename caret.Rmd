@@ -1,0 +1,141 @@
+---
+title: "Untitled"
+output: html_document
+date: "2024-11-12"
+---
+
+```{r setup, include=FALSE}
+library(caret)
+
+library(magrittr)
+library(dplyr)
+library(terra)
+library(sf)
+library(here)
+
+library(ranger)
+
+# library(CAST)
+#library(blockCV)
+#library(gstat)
+
+# library(xgboost)
+# library(plyr)
+
+
+knitr::opts_chunk$set(echo = TRUE)
+
+
+here::i_am('caret.Rmd')
+
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+bands <- rast(here('data','annual_bands.tif'))
+names(bands) <- c('blue', 'green', 'red', 'nir', 'sw1', 'sw2', 'red edge 1', 'red edge 2',
+       'red edge 3', 'tir1', 'tir2')
+```
+
+```{r}
+indices <- rast(here('data','annual_shared_indices.tif'))
+names(indices) <- c('tdvi', 'ndwi', 'msavi', 'brightness', 'greenness', 'wetness',
+       'chlorophyll_index_green')
+```
+
+```{r}
+u_names <- c('red edge 1', 'red edge 2', 'red edge 3', 'tir1', 'tir2')
+s_names <- c('blue', 'green', 'red', 'nir', 'sw1', 'sw2')
+
+april_shared <- rast(here('data','shared_bands_april.tif'))
+names(april_shared) <- paste(s_names,'_april',sep="")
+april_unique <- rast(here('data','unique_bands_april.tif'))
+names(april_unique) <- paste(u_names,'_april',sep="")
+
+july_shared <- rast(here('data','shared_bands_july.tif'))
+names(july_shared) <- paste(s_names,'_july',sep="")
+july_unique <- rast(here('data','unique_bands_july.tif'))
+names(july_unique) <- paste(u_names,"_july",sep="")
+
+october_shared <- rast(here('data','shared_bands_october.tif'))
+names(october_shared) <- paste(s_names,'_oct',sep="")
+october_unique <- rast(here('data','unique_bands_october.tif'))
+names(october_unique) <- paste(u_names,'_oct',sep="")
+
+
+```
+
+```{r}
+all_vars <- c(bands,indices,april_shared,april_unique,july_shared,july_unique,october_shared,october_unique)
+```
+
+```{r}
+balt_b <- vect(here('data','baltimore_boundary.gpkg'))
+# baltimore tree canopy
+balt_tc <- rast(here('data','tc_baltimore_buffer_30m.tif')) %>%
+                terra::crop(balt_b,mask=TRUE)
+names(balt_tc) <- 'canopy'
+
+b <- vect(here('data','bay_shoreline','Chesapeake_Bay_Shoreline_Medium_Resolution.shp')) %>%
+  project('epsg:26918')
+
+# mask annual raster
+balt_tc <- mask(balt_tc,b,inverse=TRUE)
+
+# reproject to match variables
+balt_tc <- project(balt_tc,all_vars)
+```
+
+```{r}
+all_vars <- c(all_vars,balt_tc)
+```
+
+```{r}
+make_training_df <- function(raster) {
+  df <- as.data.frame(raster) %>%
+    filter(!is.na(canopy))               # remove any rows with NA in response variable
+  is.na(df) <- sapply(df, is.infinite)   # if there are any infinite values, replace with NAs
+  df <- df[rowSums(is.na(df[,1:length(df)]))==0,]  # remove rows with NA in independent variables
+  return(df)
+}
+```
+
+```{r}
+df <- make_training_df(all_vars)
+```
+
+```{r}
+df <- read.csv(here('data','hls_bands_indices.csv'))
+```
+
+```{r}
+df_select <- select(df, matches('annual|canopy|april|july|october'))
+```
+
+
+```{r}
+df_sample <- slice_sample(df,n=8000)
+
+# split into train/test
+# set seed when you want the same rows to be sampled each time
+set.seed(100)
+train.index <- createDataPartition(df_sample$canopy,p=.7,list=FALSE,times=1)
+
+Train <- df_sample[ train.index,]
+Test  <- df_sample[-train.index,]
+```
+
+```{r}
+tr <- trainControl(method='cv',number=5)
+
+model <- train(canopy~.,data=Train,method='ranger',importance='impurity',trControl=tr)
+```
+```{r}
+model
+```
+
+
+
+```{r}
+model
+```
+
