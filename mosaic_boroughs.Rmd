@@ -15,11 +15,11 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
-mn <- rast(here('data','nyc_manhattan_hls_bands.nc'))
+mn <- rast(here('data','satellite','nyc','nyc_manhattan_hls_bands.nc'))
 ```
 
 ```{r}
-bk <- rast(here('data','nyc_brooklyn_hls_bands.nc'))
+bk <- rast(here('data','satellite', 'nyc','nyc_brooklyn_hls_bands.nc'))
 ```
 
 ```{r}
