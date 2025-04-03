@@ -7,8 +7,8 @@ import netCDF4
 import rioxarray
 from rasterio.enums import Resampling
 
-import earthaccess
-earthaccess.login(strategy="netrc")
+# import earthaccess
+# earthaccess.login(strategy="netrc")
 
 from pystac_client import Client
 catalog = Client.open("https://cmr.earthdata.nasa.gov/stac/LPCLOUD")
